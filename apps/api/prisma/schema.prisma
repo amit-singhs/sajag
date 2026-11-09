@@ -1,0 +1,146 @@
+// Relational store (Azure SQL Database) for people, consent, submissions and compliance records.
+// Campaign/form definitions are schemaless and live in Azure DocumentDB (MongoDB API).
+//
+// Workflow: edit this file -> `npm run db:migration -- <name>` -> commit the generated SQL.
+// Render's build runs `npm run db:deploy`, which applies pending migrations automatically.
+//
+// SQL Server notes: Prisma has no enums or Json on SQL Server, so enum-like columns are strings
+// validated by the shared zod schemas, and JSON payloads are NVARCHAR(MAX).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String     @id @default(uuid()) @db.NVarChar(36)
+  email        String     @unique @db.NVarChar(254)
+  name         String     @db.NVarChar(120)
+  passwordHash String     @db.NVarChar(100)
+  role         String     @default("owner") @db.NVarChar(20)
+  isActive     Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Participant {
+  id                  String      @id @default(uuid()) @db.NVarChar(36)
+  campaignId          String      @db.NVarChar(64)
+  /// HMAC of the mobile number — lookup key without storing it in clear text
+  mobileHash          String      @db.NVarChar(100)
+  /// AES-256-GCM ciphertext of the mobile number; null after erasure
+  mobileEnc           String?     @db.NVarChar(400)
+  mobileMasked        String      @db.NVarChar(20)
+  name                String?     @db.NVarChar(120)
+  tehsil              String?     @db.NVarChar(80)
+  district            String?     @db.NVarChar(80)
+  ageBand             String      @db.NVarChar(10)
+  createdAt           DateTime    @default(now())
+  scheduledErasureAt  DateTime?
+  /// When the 48-hour advance erasure notice was sent (DPDP Rules, rule 8)
+  erasureNoticeSentAt DateTime?
+  erasedAt            DateTime?
+  consents            Consent[]
+  submission          Submission?
+
+  // One-entry-per-mobile is a per-campaign setting, so it is enforced in the service, not as a constraint.
+  @@index([campaignId, mobileHash])
+  @@index([mobileHash])
+  @@index([campaignId, district])
+  @@index([scheduledErasureAt])
+}
+
+model Consent {
+  id                 String      @id @default(uuid()) @db.NVarChar(36)
+  participantId      String      @db.NVarChar(36)
+  participant        Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  method             String      @db.NVarChar(30)
+  noticeVersion      String      @db.NVarChar(20)
+  language           String      @db.NVarChar(5)
+  guardianName       String?     @db.NVarChar(120)
+  guardianRelation   String?     @db.NVarChar(20)
+  guardianMobileHash String?     @db.NVarChar(100)
+  guardianMobileEnc  String?     @db.NVarChar(400)
+  grantedAt          DateTime    @default(now())
+  withdrawnAt        DateTime?
+
+  @@index([participantId])
+  @@index([grantedAt])
+}
+
+model Submission {
+  id            String         @id @default(uuid()) @db.NVarChar(36)
+  participantId String         @unique @db.NVarChar(36)
+  participant   Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  campaignId    String         @db.NVarChar(64)
+  score         Float
+  maxScore      Float
+  /// Raw answers as submitted (JSON). Contains no personal data.
+  answersJson   String         @db.NVarChar(Max)
+  submittedAt   DateTime       @default(now())
+  answers       AnswerResult[]
+
+  @@index([campaignId, submittedAt])
+}
+
+model AnswerResult {
+  id            String     @id @default(uuid()) @db.NVarChar(36)
+  submissionId  String     @db.NVarChar(36)
+  submission    Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  campaignId    String     @db.NVarChar(64)
+  questionId    String     @db.NVarChar(64)
+  isCorrect     Boolean?
+  pointsAwarded Float
+
+  @@index([campaignId, questionId])
+  @@index([submissionId])
+}
+
+model DataRequest {
+  id           String    @id @default(uuid()) @db.NVarChar(36)
+  mobileHash   String    @db.NVarChar(100)
+  mobileMasked String    @db.NVarChar(20)
+  type         String    @db.NVarChar(20)
+  status       String    @default("open") @db.NVarChar(20)
+  details      String?   @db.NVarChar(2000)
+  response     String?   @db.NVarChar(2000)
+  createdAt    DateTime  @default(now())
+  dueAt        DateTime
+  resolvedAt   DateTime?
+  resolvedById String?   @db.NVarChar(64)
+
+  @@index([status, dueAt])
+  @@index([mobileHash])
+}
+
+model OtpChallenge {
+  id         String    @id @default(uuid()) @db.NVarChar(36)
+  mobileHash String    @db.NVarChar(100)
+  purpose    String    @db.NVarChar(30)
+  codeHash   String    @db.NVarChar(100)
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([mobileHash, purpose, createdAt])
+}
+
+model AuditLog {
+  id        String     @id @default(uuid()) @db.NVarChar(36)
+  actorId   String?    @db.NVarChar(36)
+  actor     AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String     @db.NVarChar(60)
+  entity    String     @db.NVarChar(40)
+  entityId  String?    @db.NVarChar(64)
+  meta      String?    @db.NVarChar(Max)
+  createdAt DateTime   @default(now())
+
+  @@index([createdAt])
+}

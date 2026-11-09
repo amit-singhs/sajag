@@ -1,0 +1,57 @@
+# Render Blueprint — free plan. The API runs as one free web service; Render's free tier has no cron jobs,
+# so the daily data-retention pass runs inside the API process. Keep the service awake with an external
+# free pinger hitting /health (see README → "Keep the API awake").
+#
+# Secrets live in the "sajag-secrets" env group — fill them in the Render dashboard (never committed).
+envVarGroups:
+  - name: sajag-secrets
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: sajag
+      - key: JWT_SECRET
+        sync: false
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: HASH_PEPPER
+        sync: false
+      - key: SMS_PROVIDER
+        value: console
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_TEMPLATE_ID
+        sync: false
+      - key: MSG91_ERASURE_TEMPLATE_ID
+        sync: false
+
+services:
+  - type: web
+    name: sajag-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run build:api && npm run db:deploy
+    startCommand: npm run start -w @sajag/api
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - fromGroup: sajag-secrets
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: WEB_ORIGINS
+        sync: false
+      - key: ADMIN_SEED_EMAIL
+        sync: false
+      - key: ADMIN_SEED_PASSWORD
+        sync: false
+      - key: GRIEVANCE_OFFICER_NAME
+        sync: false
+      - key: GRIEVANCE_OFFICER_EMAIL
+        sync: false
+      - key: GRIEVANCE_OFFICER_PHONE
+        sync: false

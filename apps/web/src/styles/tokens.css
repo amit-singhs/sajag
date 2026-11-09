@@ -1,0 +1,35 @@
+/* Design tokens — "civic gazette": warm paper, ink navy, vermilion seal. */
+:root {
+  --paper: #f2eee5;
+  --paper-2: #e8e2d4;
+  --paper-3: #e3dccb;
+  --card: #fbf9f4;
+  --ink: #141a2a;
+  --ink-2: #2a2f3c;
+  --muted: #4a4f5c;
+  --line: rgb(20 26 42 / 0.14);
+  --line-strong: rgb(20 26 42 / 0.28);
+  --accent: #b5381c;
+  --accent-soft: #e8805f;
+  --indigo: #1f2f6b;
+  --sand: #b9b3a5;
+  --on-ink: #f2eee5;
+  --on-ink-muted: #c9c3b5;
+
+  --font-display: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', Georgia, serif;
+  --font-body: 'Anek Devanagari', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-pill: 999px;
+  --tap: 48px;
+  --gutter: 16px;
+  --shadow-card: 0 30px 60px -30px rgb(20 26 42 / 0.35);
+}
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: 24px;
+  }
+}

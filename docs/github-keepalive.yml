@@ -1,0 +1,27 @@
+# OPTIONAL — only worth it for a PUBLIC repo (unlimited Actions minutes). A private repo's 2,000 free
+# minutes/month cannot cover a ping every 10 minutes (~4,300 runs). Prefer cron-job.org / UptimeRobot (README).
+# To use: move to .github/workflows/keepalive.yml
+# Pings the API every 10 minutes so the free Render instance does not sleep.
+# Setup: GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#        API_URL = https://<your-api>.onrender.com
+name: Keep services warm
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/keepalive.mjs
+        env:
+          API_URL: ${{ secrets.API_URL }}

@@ -1,0 +1,33 @@
+{
+  "name": "sajag",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sajag — civic legal-awareness campaigns (monorepo: web on Vercel, API on Render)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "setup:env": "node scripts/init-env.mjs",
+    "predev": "npm run db:migrate",
+    "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev -w @sajag/api\" \"npm run dev -w @sajag/web\"",
+    "dev:api": "npm run dev -w @sajag/api",
+    "dev:web": "npm run dev -w @sajag/web",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "npm run build -w @sajag/api",
+    "build:web": "npm run build -w @sajag/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:migrate": "npm run db:migrate -w @sajag/api",
+    "db:deploy": "npm run db:deploy -w @sajag/api",
+    "db:migration": "npm run db:migration -w @sajag/api --",
+    "jobs:retention": "npm run jobs:retention -w @sajag/api",
+    "keepalive": "node scripts/keepalive.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}
