@@ -37,8 +37,8 @@ const envSchema = z.object({
 
   ORG_NAME: z.string().default('सजग'),
   // Grievance officer (DPDP Rules, rule 9). Empty values fall back to these defaults.
-  GRIEVANCE_OFFICER_NAME: withFallback('प्रकाश तिवारी'),
-  GRIEVANCE_OFFICER_EMAIL: withFallback('prakatiwa@gmail.com'),
+  GRIEVANCE_OFFICER_NAME: withFallback('अमित सिंह सिसौदिआ'),
+  GRIEVANCE_OFFICER_EMAIL: withFallback('amitdrive005@gmail.com'),
   GRIEVANCE_OFFICER_PHONE: withFallback(''),
 });
 
