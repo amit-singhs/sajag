@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { submissionInputSchema, type PublicConfig } from '@sajag/shared';
+import { dataRequestInputSchema, submissionInputSchema, type PublicConfig } from '@sajag/shared';
 import { env } from '../../config/env';
 import { asyncHandler, parse, routeParam } from '../../lib/http';
 import { sensitiveLimiter } from '../../lib/rate-limit';
 import { campaignService } from '../campaigns/campaign.service';
 import { smsProvider } from '../otp/sms';
+import { dataRequestService } from '../privacy/data-request.service';
 import { submissionService } from './submission.service';
 
 /** Mounted at /api/public — no authentication. */
@@ -45,5 +46,14 @@ publicRouter.post(
   asyncHandler(async (req, res) => {
     const input = parse(submissionInputSchema, req.body);
     res.status(201).json(await submissionService.submit(routeParam(req, 'slug'), input));
+  }),
+);
+
+/** Data-principal requests (access, correction, erasure, withdrawal, grievance, nomination) by mobile number. */
+publicRouter.post(
+  '/data-requests',
+  sensitiveLimiter,
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await dataRequestService.file(parse(dataRequestInputSchema, req.body)));
   }),
 );

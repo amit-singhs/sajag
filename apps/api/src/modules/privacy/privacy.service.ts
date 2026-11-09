@@ -3,10 +3,12 @@ import { prisma } from '../../db/prisma';
 import { toIso } from '../../lib/dates';
 import { Errors } from '../../lib/errors';
 import { recordAudit } from '../audit/audit.service';
+import { eraseParticipants } from './erasure.service';
 import { asConsentMethod, toDataRequestView } from './privacy.mappers';
 
 const OPEN_STATUSES = ['open', 'in_progress'];
 const LIST_LIMIT = 200;
+const ERASING_TYPES: readonly string[] = ['erasure', 'withdrawal'];
 
 export const privacyService = {
   async summary(): Promise<PrivacySummary> {
@@ -22,21 +24,41 @@ export const privacyService = {
     return { openRequests, overdueRequests, minorsVerified, activeConsents, withdrawnConsents, scheduledErasures };
   },
 
+  /** Owner view: full mobile (to call back and verify) and how many stored records match it. */
   async listRequests(): Promise<DataRequestView[]> {
     const rows = await prisma.dataRequest.findMany({ orderBy: [{ status: 'asc' }, { dueAt: 'asc' }], take: LIST_LIMIT });
-    return rows.map((r) => toDataRequestView(r));
+    const hashes = [...new Set(rows.map((r) => r.mobileHash))];
+    const linked = hashes.length
+      ? await prisma.participant.groupBy({ by: ['mobileHash'], where: { mobileHash: { in: hashes }, erasedAt: null }, _count: { _all: true } })
+      : [];
+    const counts = new Map(linked.map((l) => [l.mobileHash, l._count._all]));
+    return rows.map((r) => toDataRequestView(r, { revealMobile: true, linkedRecords: counts.get(r.mobileHash) ?? 0 }));
   },
 
+  /**
+   * Resolving an erasure or withdrawal request erases everything linked to that mobile number.
+   * The requester's number is cleared once the request is closed (data minimisation).
+   */
   async resolveRequest(id: string, input: ResolveRequestInput, actorId: string): Promise<DataRequestView> {
     const existing = await prisma.dataRequest.findUnique({ where: { id } });
     if (!existing) throw Errors.notFound('Request');
     const done = input.status === 'resolved' || input.status === 'rejected';
+    const erases = input.status === 'resolved' && ERASING_TYPES.includes(existing.type);
+    const erased = erases ? await eraseParticipants({ mobileHash: existing.mobileHash }, existing.type === 'withdrawal' ? 'consent_withdrawn' : 'erasure_request') : 0;
+
     const updated = await prisma.dataRequest.update({
       where: { id },
-      data: { status: input.status, response: input.response || null, resolvedAt: done ? new Date() : null, resolvedById: actorId },
+      data: {
+        status: input.status,
+        response: input.response || null,
+        resolvedAt: done ? new Date() : null,
+        resolvedById: actorId,
+        ...(done ? { mobileEnc: null } : {}),
+      },
     });
-    await recordAudit({ actorId, action: `request.${input.status}`, entity: 'data_request', entityId: id, meta: { type: existing.type } });
-    return toDataRequestView(updated);
+    await recordAudit({ actorId, action: `request.${input.status}`, entity: 'data_request', entityId: id, meta: { type: existing.type, erased } });
+    const linkedRecords = await prisma.participant.count({ where: { mobileHash: existing.mobileHash, erasedAt: null } });
+    return toDataRequestView(updated, { revealMobile: true, linkedRecords });
   },
 
   async listConsents(): Promise<AdminConsentView[]> {

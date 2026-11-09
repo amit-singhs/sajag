@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../../components/layout/AdminLayout';
 import { Button } from '../../../components/ui/Button';
-import { ColumnChart, Legend, MeterRow, Stat } from '../../../components/ui/Charts';
+import { ColumnChart, Legend, Stat } from '../../../components/ui/Charts';
 import { DataTable, type Column } from '../../../components/ui/DataTable';
 import { EmptyState, ErrorNotice, Loading } from '../../../components/ui/Feedback';
 import { SelectField, TextField } from '../../../components/ui/Field';
 import { adminApi, queryKeys } from '../../../lib/api/endpoints';
 import { useAdminSession } from '../../../lib/auth/useAdminSession';
-import { formatDateTime, pad2 } from '../../../lib/labels';
+import { formatDateTime } from '../../../lib/labels';
+import { QuestionInsights } from './QuestionInsights';
 
 type DistrictRow = CampaignAnalytics['districts'][number];
 type RecentRow = CampaignAnalytics['recent'][number];
@@ -67,7 +68,6 @@ function ExportCsv({ campaignId }: { campaignId: string }) {
 
 function AnalyticsView({ data }: { data: CampaignAnalytics }) {
   const { totals } = data;
-  const lowest = [...data.questions].filter((q) => q.answered > 0).sort((a, b) => a.correctRate - b.correctRate).slice(0, 3).map((q) => q.questionId);
   const highFrom = Math.ceil(totals.maxScore * 0.8);
 
   if (totals.responses === 0) return <EmptyState title="अभी कोई प्रतिक्रिया नहीं">लिंक साझा करें — प्रतिक्रियाएँ आते ही यहाँ दिखेंगी।</EmptyState>;
@@ -76,8 +76,12 @@ function AnalyticsView({ data }: { data: CampaignAnalytics }) {
     <div className="stack-lg">
       <div className="grid-auto grid-auto--stats">
         <Stat label="कुल प्रतिक्रियाएँ" value={totals.responses.toLocaleString('en-IN')} note={`पिछले 7 दिनों में ${totals.last7Days}`} />
-        <Stat label="औसत अंक" value={totals.averageScore} unit={`/ ${totals.maxScore}`} note={`${totals.averagePercent}% सही`} />
-        <Stat label={`${highFrom}+ अंक पाने वाले`} value={`${totals.highScorerShare}%`} note={`${totals.highScorerCount} प्रतिभागी`} />
+        {data.scored && (
+          <>
+            <Stat label="औसत अंक" value={totals.averageScore} unit={`/ ${totals.maxScore}`} note={`${totals.averagePercent}% सही`} />
+            <Stat label={`${highFrom}+ अंक पाने वाले`} value={`${totals.highScorerShare}%`} note={`${totals.highScorerCount} प्रतिभागी`} />
+          </>
+        )}
         <Stat label="क्षेत्रीय पहुँच" value={totals.districts} unit="ज़िले" note={`${totals.tehsils} तहसीलें · ${totals.minors} नाबालिग`} />
       </div>
 
@@ -95,6 +99,7 @@ function AnalyticsView({ data }: { data: CampaignAnalytics }) {
             }
           />
         </section>
+        {data.scored && (
         <section className="card stack-md">
           <h2 className="title-3">अंक वितरण</h2>
           <ColumnChart
@@ -114,28 +119,18 @@ function AnalyticsView({ data }: { data: CampaignAnalytics }) {
           />
           <Legend items={[{ tone: 'soft', label: '60% से कम' }, { tone: 'base', label: '60–79%' }, { tone: 'hot', label: '80%+' }]} />
         </section>
+        )}
       </div>
 
-      <section className="card stack-md">
-        <div className="row-between">
-          <div className="stack-xs">
-            <h2 className="title-3">प्रश्न-वार सही उत्तर दर</h2>
-            <p className="muted">जिन प्रश्नों में सबसे कम लोग सही उत्तर पहचान पाए, वहीं अगले जागरूकता सत्र की ज़रूरत है।</p>
-          </div>
-          <Legend items={[{ tone: 'hot', label: 'सबसे अधिक भ्रम (निचले 3)' }]} />
-        </div>
-        <div className="stack-xs">
-          {data.questions.map((q) => (
-            <MeterRow key={q.questionId} label={`Q${pad2(q.index)}`} sub={q.topic || q.text} percent={q.correctRate} hot={lowest.includes(q.questionId)} />
-          ))}
-        </div>
-      </section>
+      <QuestionInsights questions={data.questions} />
 
       <div className="grid-auto">
-        <section className="card stack-md">
-          <h2 className="title-3">ज़िले-वार भागीदारी</h2>
-          <DataTable columns={DISTRICT_COLUMNS} rows={data.districts} rowKey={(d) => d.district} caption="ज़िले-वार भागीदारी" />
-        </section>
+        {data.districts.some((d) => d.district !== '—') && (
+          <section className="card stack-md">
+            <h2 className="title-3">ज़िले-वार भागीदारी</h2>
+            <DataTable columns={DISTRICT_COLUMNS} rows={data.districts} rowKey={(d) => d.district} caption="ज़िले-वार भागीदारी" />
+          </section>
+        )}
         <section className="card stack-md">
           <h2 className="title-3">हाल की प्रतिक्रियाएँ</h2>
           <DataTable columns={RECENT_COLUMNS} rows={data.recent} rowKey={(r) => `${r.submittedAt}-${r.mobileMasked}`} caption="हाल की प्रतिक्रियाएँ" />

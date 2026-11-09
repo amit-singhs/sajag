@@ -1,4 +1,4 @@
-import type { AdminRole, CampaignAnalytics } from '@sajag/shared';
+import { maxScoreOf, type AdminRole, type CampaignAnalytics, type Question, type QuestionAnalytics } from '@sajag/shared';
 import type { CampaignDocument } from '../../db/mongo';
 import { prisma } from '../../db/prisma';
 import { DAY_MS, istDateKey } from '../../lib/dates';
@@ -7,6 +7,7 @@ import { recordAudit } from '../audit/audit.service';
 const HIGH_SCORE_RATIO = 0.8;
 const DAILY_WINDOW = 30;
 const RECENT_LIMIT = 10;
+const TEXT_ANSWER_LIMIT = 20;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -17,6 +18,66 @@ function csvCell(value: string | number | null | undefined): string {
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
+interface StoredAnswer {
+  questionId: string;
+  optionIds?: string[];
+  text?: string;
+}
+
+function parseAnswers(json: string): StoredAnswer[] {
+  try {
+    const value: unknown = JSON.parse(json);
+    return Array.isArray(value) ? (value as StoredAnswer[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Per-question breakdown that adapts to each campaign's own structure: option counts for choice questions
+ * (single, multi-correct, true/false), correctness only where marks exist, and recent open-text answers.
+ */
+function questionBreakdown(
+  questions: readonly Question[],
+  submissions: ReadonlyArray<{ answersJson: string; participant: { ageBand: string } }>,
+  correctness: ReadonlyMap<string, { answered: number; correct: number }>,
+  includeText: boolean,
+): QuestionAnalytics[] {
+  const optionCounts = new Map<string, Map<string, number>>();
+  const answeredBy = new Map<string, number>();
+  const texts = new Map<string, string[]>();
+  for (const s of submissions) {
+    for (const a of parseAnswers(s.answersJson)) {
+      const picked = a.optionIds ?? [];
+      if (picked.length || a.text) answeredBy.set(a.questionId, (answeredBy.get(a.questionId) ?? 0) + 1);
+      const counts = optionCounts.get(a.questionId) ?? new Map<string, number>();
+      for (const id of picked) counts.set(id, (counts.get(id) ?? 0) + 1);
+      optionCounts.set(a.questionId, counts);
+      // Submissions are newest-first; never surface free text written by minors.
+      if (includeText && a.text && s.participant.ageBand !== 'minor') {
+        const list = texts.get(a.questionId) ?? [];
+        if (list.length < TEXT_ANSWER_LIMIT) list.push(a.text);
+        texts.set(a.questionId, list);
+      }
+    }
+  }
+  return questions.map((q, i) => {
+    const stats = correctness.get(q.id);
+    const scored = q.type !== 'text' && q.points > 0;
+    return {
+      questionId: q.id,
+      index: i + 1,
+      type: q.type,
+      topic: q.topic,
+      text: q.text,
+      answered: answeredBy.get(q.id) ?? stats?.answered ?? 0,
+      correctRate: scored ? (stats?.answered ? Math.round((stats.correct / stats.answered) * 100) : 0) : null,
+      options: q.type === 'text' ? [] : q.options.map((o) => ({ id: o.id, text: o.text, correct: o.correct, count: optionCounts.get(q.id)?.get(o.id) ?? 0 })),
+      textAnswers: texts.get(q.id) ?? [],
+    };
+  });
+}
+
 async function loadSubmissions(campaignId: string) {
   return prisma.submission.findMany({
     where: { campaignId },
@@ -24,6 +85,7 @@ async function loadSubmissions(campaignId: string) {
     select: {
       score: true,
       submittedAt: true,
+      answersJson: true,
       participant: { select: { name: true, mobileMasked: true, tehsil: true, district: true, ageBand: true, erasedAt: true } },
     },
   });
@@ -32,7 +94,7 @@ async function loadSubmissions(campaignId: string) {
 export const analyticsService = {
   async forCampaign(campaign: CampaignDocument, viewerRole: AdminRole): Promise<CampaignAnalytics> {
     const campaignId = campaign._id.toHexString();
-    const maxScore = campaign.questions.reduce((s, q) => s + (q.type === 'text' ? 0 : q.points), 0);
+    const maxScore = maxScoreOf(campaign.questions);
     const [submissions, answerGroups] = await Promise.all([
       loadSubmissions(campaignId),
       prisma.answerResult.groupBy({ by: ['questionId', 'isCorrect'], where: { campaignId }, _count: { _all: true } }),
@@ -83,6 +145,7 @@ export const analyticsService = {
     const canSeeNames = viewerRole === 'owner';
     return {
       campaignId,
+      scored: maxScore > 0,
       totals: {
         responses,
         last7Days: submissions.filter((s) => now - s.submittedAt.getTime() < 7 * DAY_MS).length,
@@ -97,19 +160,7 @@ export const analyticsService = {
       },
       daily: [...dailyMap].map(([date, count]) => ({ date, count })),
       scoreDistribution: [...distribution].map(([score, count]) => ({ score, count })),
-      questions: campaign.questions
-        .filter((q) => q.type !== 'text')
-        .map((q, index) => {
-          const stats = perQuestion.get(q.id) ?? { answered: 0, correct: 0 };
-          return {
-            questionId: q.id,
-            index: index + 1,
-            topic: q.topic,
-            text: q.text,
-            answered: stats.answered,
-            correctRate: stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0,
-          };
-        }),
+      questions: questionBreakdown(campaign.questions, submissions, perQuestion, canSeeNames),
       districts: [...byDistrict]
         .map(([district, e]) => ({ district, tehsils: e.tehsils.size, responses: e.responses, averageScore: round1(e.total / e.responses) }))
         .sort((a, b) => b.responses - a.responses),

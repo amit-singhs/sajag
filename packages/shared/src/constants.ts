@@ -51,9 +51,6 @@ export const DATA_REQUEST_TYPES = [
 ] as const;
 export type DataRequestType = (typeof DATA_REQUEST_TYPES)[number];
 
-/** Request types a participant files for manual handling (access/erasure/withdrawal are self-service). */
-export const MANUAL_REQUEST_TYPES = ['correction', 'grievance', 'nomination'] as const;
-export type ManualRequestType = (typeof MANUAL_REQUEST_TYPES)[number];
 
 export const DATA_REQUEST_STATUSES = ['open', 'in_progress', 'resolved', 'rejected'] as const;
 export type DataRequestStatus = (typeof DATA_REQUEST_STATUSES)[number];

@@ -106,6 +106,8 @@ model DataRequest {
   id           String    @id @default(uuid()) @db.NVarChar(36)
   mobileHash   String    @db.NVarChar(100)
   mobileMasked String    @db.NVarChar(20)
+  /// AES-256-GCM ciphertext — lets an owner call the person back to verify the request; cleared on resolution
+  mobileEnc    String?   @db.NVarChar(400)
   type         String    @db.NVarChar(20)
   status       String    @default("open") @db.NVarChar(20)
   details      String?   @db.NVarChar(2000)

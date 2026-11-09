@@ -11,7 +11,7 @@ export function PrivacyNotice({ policy }: { policy: DataPolicy }) {
   const { data: config } = usePublicConfig();
   const officer = config?.grievanceOfficer;
   const items = [
-    { label: 'मोबाइल नंबर', purpose: 'एक व्यक्ति, एक प्रविष्टि; आपके डेटा अनुरोधों की OTP से पुष्टि' },
+    { label: 'मोबाइल नंबर', purpose: 'एक व्यक्ति, एक प्रविष्टि; आपके डेटा अनुरोधों पर संपर्क के लिए' },
     ...OPTIONAL_PERSONAL_FIELDS.filter((k) => policy.fields[k].collect).map((k) => ({ label: FIELD_LABEL[k], purpose: policy.fields[k].purpose })),
     { label: 'आयु वर्ग', purpose: '18 से कम होने पर अभिभावक की सहमति लेने के लिए' },
     ...(policy.minors === 'guardian'
@@ -31,16 +31,16 @@ export function PrivacyNotice({ policy }: { policy: DataPolicy }) {
       </dl>
       <div className="callout stack-sm">
         <p>
-          <strong>कब तक:</strong> अभियान समाप्ति के {policy.retentionDays} दिन बाद आपकी व्यक्तिगत जानकारी मिटा दी जाएगी। मिटाने से 48 घंटे पहले SMS से सूचना दी जाएगी।
+          <strong>कब तक:</strong> अभियान समाप्ति के {policy.retentionDays} दिन बाद आपकी व्यक्तिगत जानकारी अपने-आप मिटा दी जाएगी।
         </p>
         <p>
           <strong>कभी नहीं:</strong> बेचना, विज्ञापन, ट्रैकिंग या किसी और उद्देश्य के लिए उपयोग।
         </p>
         <p>
-          <strong>आपके अधिकार:</strong> देखना, सुधारना, मिटवाना, सहमति वापस लेना और नामांकित व्यक्ति चुनना — <Link to="/my-data">मेरा डेटा</Link>।
+          <strong>आपके अधिकार:</strong> अपनी जानकारी जानना, सुधारना, मिटवाना, सहमति वापस लेना और नामांकित व्यक्ति चुनना — <Link to="/my-data">मेरा डेटा</Link> पर अपने मोबाइल नंबर से अनुरोध भेजें।
         </p>
         <p>
-          <strong>शिकायत:</strong> {officer?.name || '[शिकायत अधिकारी]'}, {officer?.email || '[ईमेल]'}, {officer?.phone || '[फ़ोन]'}। संतुष्ट न हों तो
+          <strong>शिकायत अधिकारी:</strong> {[officer?.name, officer?.email, officer?.phone].filter(Boolean).join(', ') || '—'}। संतुष्ट न हों तो
           भारत के डेटा संरक्षण बोर्ड में शिकायत कर सकते हैं।
         </p>
         <p className="muted">सूचना संस्करण {policy.noticeVersion}</p>

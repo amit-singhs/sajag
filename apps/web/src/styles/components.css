@@ -70,8 +70,28 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input:focus { border-color: var(--ink); box-shadow: 0 0 0 4px rgb(20 26 42 / 0.1); }
+.input--compact { min-height: 40px; width: auto; font-size: 15px; padding: 0 10px; }
 .input--area { padding: 12px 14px; min-height: 110px; resize: vertical; line-height: 1.55; }
 .field--error .input { border-color: var(--accent); }
+.password { position: relative; }
+.password__input { padding-right: 52px; }
+.password__toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.password__toggle:hover { color: var(--ink); }
 .checkbox { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding-top: 10px; cursor: pointer; line-height: 1.5; }
 .checkbox input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--ink); flex: none; }
 .checkbox--disabled { opacity: 0.5; cursor: not-allowed; }
@@ -121,6 +141,8 @@
 .choice--radio .choice__mark:empty { border-radius: 50%; }
 .choice--checkbox .choice__mark svg { opacity: 0; }
 .choice.is-selected { border: 2px solid var(--ink); background: #ece6d8; }
+.choice__help { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+.choice__text strong { font-weight: 600; }
 .choice.is-selected .choice__mark { background: var(--ink); border-color: var(--ink); color: var(--card); }
 .choice.is-selected .choice__mark svg { opacity: 1; }
 

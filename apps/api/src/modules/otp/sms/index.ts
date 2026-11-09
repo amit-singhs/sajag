@@ -9,7 +9,6 @@ function createSmsProvider(): SmsProvider {
     return new Msg91SmsProvider({
       authKey: env.MSG91_AUTH_KEY,
       otpTemplateId: env.MSG91_TEMPLATE_ID,
-      ...(env.MSG91_ERASURE_TEMPLATE_ID ? { erasureTemplateId: env.MSG91_ERASURE_TEMPLATE_ID } : {}),
     });
   }
   if (isProduction) logger.warn('SMS_PROVIDER=console in production: OTPs are only logged, participants cannot verify');

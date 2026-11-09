@@ -24,8 +24,6 @@ envVarGroups:
         sync: false
       - key: MSG91_TEMPLATE_ID
         sync: false
-      - key: MSG91_ERASURE_TEMPLATE_ID
-        sync: false
 
 services:
   - type: web

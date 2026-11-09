@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet } from 'react-router-dom';
 import { publicApi, queryKeys } from '../../lib/api/endpoints';
+import { HashLink, ScrollToHash } from '../navigation/HashLink';
 import { Wordmark } from '../ui/Seal';
 
 /** Person credited as running the campaign (shown in the footer). */
@@ -16,12 +17,12 @@ function PublicHeader() {
       <div className="container site-header__row">
         <Wordmark sub="SAJAG · नागरिक पहल" />
         <nav className="site-nav" aria-label="मुख्य">
-          <Link to="/#abhiyan" className="site-nav__link site-nav__link--wide">
+          <HashLink to="#abhiyan" className="site-nav__link site-nav__link--wide">
             अभियान
-          </Link>
-          <Link to="/#help" className="site-nav__link site-nav__link--wide">
+          </HashLink>
+          <HashLink to="#help" className="site-nav__link site-nav__link--wide">
             हेल्पलाइन
-          </Link>
+          </HashLink>
           <Link to="/my-data" className="site-nav__link">
             मेरा डेटा
           </Link>
@@ -49,10 +50,17 @@ function PublicFooter() {
             </p>
           </div>
           <nav className="stack-sm site-footer__links" aria-label="फ़ुटर">
-            <Link to="/my-data">मेरा डेटा — देखें, सुधारें, मिटवाएँ</Link>
+            <Link to="/my-data">मेरा डेटा — जानकारी या मिटाने का अनुरोध</Link>
             <Link to="/privacy">गोपनीयता सूचना</Link>
             <span className="muted">
-              शिकायत अधिकारी: {officer?.name || '[नाम]'} · {officer?.email || '[ईमेल]'} · {officer?.phone || '[फ़ोन]'}
+              शिकायत अधिकारी: {officer?.name || '—'}
+              {officer?.email && (
+                <>
+                  {' · '}
+                  <a href={`mailto:${officer.email}`}>{officer.email}</a>
+                </>
+              )}
+              {officer?.phone && ` · ${officer.phone}`}
             </span>
           </nav>
         </div>
@@ -73,6 +81,7 @@ export function PublicLayout() {
       <a href="#main" className="skip-link">
         मुख्य सामग्री पर जाएँ
       </a>
+      <ScrollToHash />
       <PublicHeader />
       <main id="main">
         <Outlet />

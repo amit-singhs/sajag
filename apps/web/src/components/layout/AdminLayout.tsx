@@ -8,10 +8,11 @@ import { Icon, type IconName } from '../ui/Icon';
 import { Wordmark } from '../ui/Seal';
 import { SystemStatus } from './SystemStatus';
 
-const NAV: ReadonlyArray<{ to: string; label: string; icon: IconName; end?: boolean }> = [
+const NAV: ReadonlyArray<{ to: string; label: string; icon: IconName; end?: boolean; ownerOnly?: boolean }> = [
   { to: '/admin', label: 'अवलोकन', icon: 'grid', end: true },
   { to: '/admin/campaigns', label: 'अभियान व फ़ॉर्म', icon: 'list' },
   { to: '/admin/privacy', label: 'डेटा एवं गोपनीयता', icon: 'shield' },
+  { to: '/admin/users', label: 'व्यवस्थापक खाते', icon: 'user', ownerOnly: true },
 ];
 
 /** Authenticated shell: sidebar on desktop, compact top bar with scrolling nav on phones. */
@@ -40,7 +41,7 @@ export function AdminLayout() {
       <aside className="admin__side">
         <Wordmark to="/admin" sub="ADMIN" inverse />
         <nav className="admin__nav" aria-label="व्यवस्थापक">
-          {NAV.map((item) => (
+          {NAV.filter((item) => !item.ownerOnly || session.can('owner')).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `admin__link${isActive ? ' is-active' : ''}`}>
               <Icon name={item.icon} />
               {item.label}
@@ -50,6 +51,9 @@ export function AdminLayout() {
         <div className="admin__foot">
           <span>{session.profile.name}</span>
           <span className="admin__role">{ROLE_LABEL[session.profile.role]}</span>
+          <NavLink to="/admin/account" className="admin__account">
+            <Icon name="key" /> मेरा खाता
+          </NavLink>
           <button type="button" className="admin__logout" onClick={session.signOut}>
             <Icon name="logout" /> लॉग आउट
           </button>

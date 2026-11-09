@@ -64,7 +64,7 @@ Ping `GET https://<your-api>.onrender.com/health` every 10 minutes with a free e
 monthly free compute allowance, which a 24×7 database ping would exhaust within days. It resumes automatically
 (up to ~1 minute) on the next real request. `/api/health` checks both databases and is used by the admin banner.
 
-The DPDP retention pass (48-hour notices, erasure, OTP clean-up) runs daily inside the API, because Render's free
+The DPDP retention pass (erasure of expired data, OTP clean-up) runs daily inside the API, because Render's free
 tier has no cron jobs. Run it manually any time with `npm run jobs:retention`.
 
 Local check: `API_URL=http://localhost:4000 npm run keepalive`

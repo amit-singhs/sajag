@@ -165,6 +165,8 @@
 .admin__foot { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .admin__foot > span { display: none; }
 .admin__role { font-family: var(--font-mono); font-size: 11px; color: #8e897c; }
+.admin__account { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--on-ink-muted); text-decoration: none; }
+.admin__account:hover, .admin__account.active { color: var(--on-ink); }
 .admin__logout { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 0; background: none; color: var(--on-ink-muted); cursor: pointer; }
 .admin__main { flex: 1; min-width: 0; padding: 24px var(--gutter) 64px; }
 @media (min-width: 960px) {
@@ -243,3 +245,26 @@
 .is-ok .checklist__tick { background: var(--indigo); color: #fff; }
 .is-todo .checklist__tick { border: 2px dashed var(--accent); }
 .resolve { min-width: 220px; }
+
+/* ---------- Dashboard question insights ---------- */
+.insights { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.insight { border-bottom: 1px solid var(--line); }
+.insight__summary {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  padding: 10px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.insight__summary::-webkit-details-marker { display: none; }
+.insight__title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.insight__rate { font-family: var(--font-mono); font-size: 14px; padding: 4px 10px; border-radius: var(--radius-pill); background: #ece6d8; white-space: nowrap; }
+.insight__rate.is-hot { background: var(--accent); color: #fff; }
+.insight__rate.is-neutral { color: var(--muted); }
+.insight[open] .insight__summary { border-bottom: 1px dashed var(--line-strong); }
+.insight__body { display: flex; flex-direction: column; gap: 12px; padding: 14px 0 18px; }
+.insight__question { font-family: var(--font-display); font-size: 17px; line-height: 1.5; }
+.answer-list { margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }

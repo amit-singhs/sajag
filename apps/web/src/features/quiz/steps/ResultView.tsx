@@ -83,7 +83,7 @@ export function ResultView({ result, campaignTitle }: { result: SubmissionResult
       <div className="callout stack-sm">
         <strong>आपका डेटा</strong>
         <p>
-          आपकी व्यक्तिगत जानकारी {formatDate(result.scheduledErasureAt)} को अपने-आप मिट जाएगी। आप इसे अभी भी देख या मिटवा सकते हैं —{' '}
+          आपकी व्यक्तिगत जानकारी {formatDate(result.scheduledErasureAt)} को अपने-आप मिट जाएगी। इसे पहले मिटवाने या इसके बारे में जानने के लिए —{' '}
           <Link to="/my-data">मेरा डेटा</Link>।
         </p>
       </div>
