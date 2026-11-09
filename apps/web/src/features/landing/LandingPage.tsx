@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CampaignSummary } from '@sajag/shared';
+import { HashLink } from '../../components/navigation/HashLink';
 import { ButtonLink } from '../../components/ui/Button';
 import { EmptyState, ErrorNotice, Loading } from '../../components/ui/Feedback';
 import { publicApi, queryKeys } from '../../lib/api/endpoints';
@@ -89,9 +90,9 @@ export function LandingPage() {
                   प्रश्नावली शुरू करें
                 </ButtonLink>
               )}
-              <ButtonLink to="/#abhiyan" variant="ghost">
+              <HashLink to="#abhiyan" className="btn btn--ghost btn--md">
                 अभियान देखें
-              </ButtonLink>
+              </HashLink>
             </div>
           </div>
           <div className="hero__card" aria-hidden="true">

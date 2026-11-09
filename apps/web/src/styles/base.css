@@ -31,6 +31,11 @@ figure {
   margin: 0;
 }
 
+/* Anchored sections clear the sticky header when scrolled to. */
+[id] {
+  scroll-margin-top: 84px;
+}
+
 a {
   color: var(--ink);
   text-underline-offset: 3px;

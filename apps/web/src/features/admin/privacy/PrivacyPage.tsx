@@ -25,6 +25,9 @@ function ResolveRequest({ request }: { request: DataRequestView }) {
   if (request.status === 'resolved' || request.status === 'rejected') return <span className="muted">{request.response || '—'}</span>;
   return (
     <div className="stack-xs resolve">
+      {(request.type === 'erasure' || request.type === 'withdrawal') && (
+        <span className="muted small">"पूर्ण" करते ही इस नंबर से जुड़ी सारी व्यक्तिगत जानकारी मिट जाएगी।</span>
+      )}
       <input className="input" aria-label="उत्तर" placeholder="उत्तर / की गई कार्रवाई" value={response} onChange={(e) => setResponse(e.target.value)} />
       <div className="row-tight">
         <Button size="sm" onClick={() => resolve.mutate('resolved')} loading={resolve.isPending}>
@@ -41,7 +44,14 @@ function ResolveRequest({ request }: { request: DataRequestView }) {
 
 const REQUEST_COLUMNS: ReadonlyArray<Column<DataRequestView>> = [
   { key: 'type', header: 'प्रकार', render: (r) => <strong>{REQUEST_TYPE_LABEL[r.type]}</strong> },
-  { key: 'mobile', header: 'मोबाइल', render: (r) => r.mobileMasked, mono: true },
+  { key: 'ref', header: 'संदर्भ', render: (r) => r.reference, mono: true },
+  {
+    key: 'mobile',
+    header: 'मोबाइल (पुष्टि हेतु कॉल करें)',
+    render: (r) => (r.mobile ? <a href={`tel:${r.mobile}`}>{r.mobile}</a> : r.mobileMasked),
+    mono: true,
+  },
+  { key: 'linked', header: 'जुड़े रिकॉर्ड', render: (r) => r.linkedRecords, mono: true },
   { key: 'details', header: 'विवरण', render: (r) => <span className="clamp-2">{r.details ?? '—'}</span> },
   { key: 'due', header: 'अंतिम तिथि', render: (r) => formatDate(r.dueAt), mono: true },
   {
@@ -74,8 +84,8 @@ function ComplianceChecklist({ grievanceSet }: { grievanceSet: boolean }) {
     { ok: true, title: 'न्यूनतम डेटा — हर फ़ील्ड का उद्देश्य', ref: 'धारा 6(1)' },
     { ok: true, title: 'नाबालिग: अभिभावक की सहमति (घोषणा + मोबाइल), कोई ट्रैकिंग नहीं', ref: 'धारा 9' },
     { ok: false, title: 'अभिभावक की पहचान का सत्यापन (OTP / DigiLocker) — अभी लंबित', ref: 'नियम 10 · मई 2027 से पहले' },
-    { ok: true, title: 'अधिकार: देखना, सुधारना, मिटाना, सहमति वापसी, नामांकन', ref: 'धारा 11–14' },
-    { ok: true, title: 'प्रतिधारण, 48 घंटे पूर्व सूचना, स्वतः मिटाना', ref: 'धारा 8(7) · नियम 8' },
+    { ok: true, title: 'अधिकार: जानना, सुधारना, मिटाना, सहमति वापसी, नामांकन — मोबाइल से अनुरोध, कॉल कर पुष्टि', ref: 'धारा 11–14' },
+    { ok: true, title: 'प्रतिधारण अवधि पूरी होने पर स्वतः मिटाना', ref: 'धारा 8(7)' },
     { ok: true, title: 'एन्क्रिप्शन, भूमिका-आधारित पहुँच, ऑडिट लॉग', ref: 'धारा 8(5) · नियम 6' },
     { ok: grievanceSet, title: 'शिकायत अधिकारी का संपर्क प्रकाशित', ref: 'धारा 8(9) · नियम 9' },
   ];
@@ -131,7 +141,10 @@ export function PrivacyPage() {
       {isOwner && (
         <>
           <section className="card stack-md">
-            <h2 className="title-3">अधिकार अनुरोध और शिकायतें</h2>
+            <div className="stack-xs">
+              <h2 className="title-3">अधिकार अनुरोध और शिकायतें</h2>
+              <p className="muted">अनुरोध "मेरा डेटा" पेज से मोबाइल नंबर के साथ आते हैं। कार्रवाई से पहले उसी नंबर पर कॉल करके व्यक्ति की पुष्टि करें। अनुरोध बंद होते ही नंबर हटा दिया जाता है।</p>
+            </div>
             <QueryTable query={requests} columns={REQUEST_COLUMNS} rowKey={(r) => r.id} caption="अधिकार अनुरोध" />
           </section>
           <div className="grid-auto">

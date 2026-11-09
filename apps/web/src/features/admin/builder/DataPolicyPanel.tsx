@@ -81,7 +81,7 @@ export function DataPolicyPanel({ policy, digilockerEnabled, onField, onPolicy }
 
       <section className="card">
         <h2 className="title-2">प्रतिधारण</h2>
-        <SettingRow title="व्यक्तिगत जानकारी कब मिटे" hint="अभियान समाप्ति (या प्रविष्टि) के इतने दिन बाद; 48 घंटे पहले SMS सूचना">
+        <SettingRow title="व्यक्तिगत जानकारी कब मिटे" hint="अभियान समाप्ति (या प्रविष्टि) के इतने दिन बाद अपने-आप मिटेगी">
           <TextField
             label="दिन"
             type="number"

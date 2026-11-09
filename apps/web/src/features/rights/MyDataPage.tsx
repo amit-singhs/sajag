@@ -1,155 +1,126 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MANUAL_REQUEST_TYPES, type ManualRequestType, type MyDataView, type ParticipationView } from '@sajag/shared';
-import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import {
+  DATA_REQUEST_TYPES,
+  DETAIL_REQUIRED_REQUEST_TYPES,
+  INDIAN_MOBILE_REGEX,
+  normalizeMobileInput,
+  type DataRequestType,
+} from '@sajag/shared';
+import { useState, type FormEvent } from 'react';
+import { usePublicConfig } from '../../components/layout/PublicLayout';
 import { Button } from '../../components/ui/Button';
-import { Segmented } from '../../components/ui/Choice';
-import { ErrorNotice, Loading, Notice } from '../../components/ui/Feedback';
-import { TextArea } from '../../components/ui/Field';
-import { rightsApi, queryKeys } from '../../lib/api/endpoints';
-import { CONSENT_METHOD_LABEL, REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL, formatDate } from '../../lib/labels';
-import { OtpVerifier } from '../otp/OtpVerifier';
+import { ChoiceButton } from '../../components/ui/Choice';
+import { ErrorNotice, Notice } from '../../components/ui/Feedback';
+import { TextArea, TextField } from '../../components/ui/Field';
+import { publicApi } from '../../lib/api/endpoints';
+import { REQUEST_TYPE_LABEL, formatDate } from '../../lib/labels';
 
-function downloadJson(data: MyDataView) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: 'sajag-my-data.json' });
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function ParticipationCard({ p }: { p: ParticipationView }) {
-  const rows: Array<[string, string]> = [
-    ['अभियान', p.campaignTitle],
-    ['नाम', p.name ?? '—'],
-    ['तहसील', p.tehsil ?? '—'],
-    ['ज़िला', p.district ?? '—'],
-    ['आयु वर्ग', p.ageBand === 'minor' ? '18 से कम' : '18+'],
-    ['अंक', p.score === null ? '—' : `${p.score} / ${p.maxScore}`],
-    ['सहमति', p.consent ? `${CONSENT_METHOD_LABEL[p.consent.method]} · सूचना v${p.consent.noticeVersion}` : '—'],
-    ['मिटेगा', formatDate(p.scheduledErasureAt)],
-  ];
-  return (
-    <div className="card">
-      <dl className="kv">
-        {rows.map(([k, v]) => (
-          <div key={k} className="kv__row">
-            <dt>{k}</dt>
-            <dd>{v}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-function RequestForm({ token }: { token: string }) {
-  const queryClient = useQueryClient();
-  const [type, setType] = useState<ManualRequestType>('correction');
-  const [details, setDetails] = useState('');
-  const file = useMutation({
-    mutationFn: () => rightsApi.fileRequest(token, { type, details }),
-    onSuccess: () => {
-      setDetails('');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.myData });
-    },
-  });
-  return (
-    <div className="card stack-md">
-      <h2 className="title-3">सुधार, शिकायत या नामांकन</h2>
-      <Segmented label="अनुरोध का प्रकार" value={type} onChange={setType} options={MANUAL_REQUEST_TYPES.map((v) => ({ value: v, label: REQUEST_TYPE_LABEL[v] }))} />
-      <TextArea
-        label="विवरण"
-        value={details}
-        onChange={(e) => setDetails(e.target.value)}
-        hint={type === 'nomination' ? 'उस व्यक्ति का नाम और संबंध लिखें जो आपकी मृत्यु या अक्षमता पर आपके अधिकारों का उपयोग करेगा।' : undefined}
-      />
-      {file.error && <ErrorNotice error={file.error} />}
-      {file.isSuccess && <Notice tone="success">अनुरोध दर्ज हो गया। 30 दिनों के भीतर उत्तर दिया जाएगा।</Notice>}
-      <Button onClick={() => file.mutate()} disabled={details.trim().length < 5} loading={file.isPending}>
-        अनुरोध भेजें
-      </Button>
-    </div>
-  );
-}
-
-function WithdrawPanel({ token, onDone }: { token: string; onDone: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const withdraw = useMutation({ mutationFn: () => rightsApi.withdraw(token), onSuccess: onDone });
-  return (
-    <div className="card card--danger stack-sm">
-      <h2 className="title-3">सहमति वापस लें और डेटा मिटवाएँ</h2>
-      <p className="muted">आपकी व्यक्तिगत जानकारी तुरंत और स्थायी रूप से मिटा दी जाएगी; केवल बिना पहचान वाले आँकड़े रहेंगे।</p>
-      {withdraw.error && <ErrorNotice error={withdraw.error} />}
-      {confirming ? (
-        <div className="row-wrap">
-          <Button variant="danger" onClick={() => withdraw.mutate()} loading={withdraw.isPending}>
-            हाँ, स्थायी रूप से मिटाएँ
-          </Button>
-          <Button variant="ghost" onClick={() => setConfirming(false)}>
-            रद्द करें
-          </Button>
-        </div>
-      ) : (
-        <Button variant="danger" onClick={() => setConfirming(true)}>
-          मिटवाएँ
-        </Button>
-      )}
-    </div>
-  );
-}
+/** What each request type means, in plain words for the person filing it. */
+const REQUEST_HELP: Record<DataRequestType, string> = {
+  access: 'हमारे पास आपकी कौन-सी जानकारी है, यह जानना चाहते हैं',
+  correction: 'नाम, तहसील या ज़िले में कोई गलती ठीक करवानी है',
+  erasure: 'अपनी सारी व्यक्तिगत जानकारी मिटवाना चाहते हैं',
+  withdrawal: 'दी गई सहमति वापस लेना चाहते हैं (जानकारी भी मिटा दी जाएगी)',
+  grievance: 'किसी बात की शिकायत करनी है',
+  nomination: 'आपकी मृत्यु या अक्षमता की स्थिति में अधिकारों के लिए किसी को नामित करना है',
+};
 
 export function MyDataPage() {
+  const { data: config } = usePublicConfig();
   const [mobile, setMobile] = useState('');
-  const [token, setToken] = useState<string | null>(null);
-  const [erased, setErased] = useState(false);
-  const myData = useQuery({ queryKey: [...queryKeys.myData, token], queryFn: () => rightsApi.me(token ?? ''), enabled: Boolean(token) });
+  const [type, setType] = useState<DataRequestType>('access');
+  const [details, setDetails] = useState('');
+  const file = useMutation({ mutationFn: () => publicApi.fileDataRequest({ mobile, type, details: details.trim() }) });
+
+  const mobileValid = INDIAN_MOBILE_REGEX.test(mobile);
+  const needsDetails = DETAIL_REQUIRED_REQUEST_TYPES.includes(type);
+  const canSubmit = mobileValid && (!needsDetails || details.trim().length >= 5);
+  const officer = config?.grievanceOfficer;
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (canSubmit) file.mutate();
+  };
+
+  if (file.data) {
+    return (
+      <section className="container narrow section stack-lg">
+        <Notice tone="success" title="आपका अनुरोध दर्ज हो गया है">
+          संदर्भ संख्या <strong className="mono">{file.data.reference}</strong>। हम {formatDate(file.data.dueAt)} तक आपके मोबाइल नंबर पर संपर्क करके पहचान
+          की पुष्टि करेंगे और अनुरोध पूरा करेंगे।
+        </Notice>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            file.reset();
+            setDetails('');
+          }}
+        >
+          एक और अनुरोध भेजें
+        </Button>
+      </section>
+    );
+  }
 
   return (
     <section className="container narrow section stack-lg">
       <div className="stack-sm">
         <span className="eyebrow">मेरा डेटा</span>
-        <h1 className="display-2">अपनी जानकारी देखें और नियंत्रित करें</h1>
-        <p className="lead">जिस मोबाइल नंबर से आपने प्रश्नावली भरी थी, उस पर OTP भेजकर हम पुष्टि करेंगे कि यह आप ही हैं।</p>
+        <h1 className="display-2">अपनी जानकारी के बारे में अनुरोध भेजें</h1>
+        <p className="lead">
+          जिस मोबाइल नंबर से आपने प्रश्नावली भरी थी, वही नंबर लिखें और बताएँ कि आप क्या चाहते हैं। हमारी टीम उसी नंबर पर संपर्क करके आपकी पहचान की पुष्टि करेगी।
+        </p>
       </div>
 
-      {!token && <OtpVerifier purpose="data_rights" mobile={mobile} onMobileChange={setMobile} onVerified={setToken} />}
-      {erased && <Notice tone="success" title="आपका डेटा मिटा दिया गया">आपकी सहमति वापस ले ली गई है।</Notice>}
-      {token && myData.isLoading && <Loading />}
-      {myData.error && <ErrorNotice error={myData.error} />}
+      <form className="stack-lg" onSubmit={onSubmit}>
+        <TextField
+          label="मोबाइल नंबर"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel"
+          placeholder="10 अंक"
+          value={mobile}
+          onChange={(e) => setMobile(normalizeMobileInput(e.target.value))}
+          error={mobile.length === 10 && !mobileValid ? 'कृपया सही मोबाइल नंबर दर्ज करें' : undefined}
+        />
 
-      {token && myData.data && !erased && (
-        <>
-          {myData.data.participations.length === 0 ? (
-            <Notice>इस मोबाइल नंबर से जुड़ी कोई जानकारी हमारे पास नहीं है।</Notice>
-          ) : (
-            <div className="stack-md">
-              {myData.data.participations.map((p) => (
-                <ParticipationCard key={p.participantId} p={p} />
-              ))}
-              <Button variant="ghost" icon="download" onClick={() => downloadJson(myData.data)}>
-                पूरी जानकारी डाउनलोड करें
-              </Button>
-            </div>
-          )}
-          <RequestForm token={token} />
-          {myData.data.requests.length > 0 && (
-            <div className="card stack-sm">
-              <h2 className="title-3">आपके अनुरोध</h2>
-              <ul className="plain-list">
-                {myData.data.requests.map((r) => (
-                  <li key={r.id} className="row-between">
-                    <span>
-                      {REQUEST_TYPE_LABEL[r.type]} · {formatDate(r.createdAt)}
-                    </span>
-                    <span className="pill">{REQUEST_STATUS_LABEL[r.status]}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {myData.data.participations.length > 0 && <WithdrawPanel token={token} onDone={() => setErased(true)} />}
-        </>
-      )}
-      <p className="muted">शिकायत का समाधान न होने पर आप भारत के डेटा संरक्षण बोर्ड से संपर्क कर सकते हैं।</p>
+        <fieldset className="fieldset stack-sm">
+          <legend className="field__label">आप क्या चाहते हैं?</legend>
+          {DATA_REQUEST_TYPES.map((t) => (
+            <ChoiceButton key={t} kind="radio" selected={type === t} onSelect={() => setType(t)}>
+              <strong>{REQUEST_TYPE_LABEL[t]}</strong>
+              <span className="choice__help">{REQUEST_HELP[t]}</span>
+            </ChoiceButton>
+          ))}
+        </fieldset>
+
+        <TextArea
+          label={needsDetails ? 'विवरण' : 'विवरण (वैकल्पिक)'}
+          value={details}
+          maxLength={2000}
+          onChange={(e) => setDetails(e.target.value)}
+          hint={type === 'nomination' ? 'उस व्यक्ति का नाम, संबंध और मोबाइल नंबर लिखें।' : undefined}
+        />
+
+        {(type === 'erasure' || type === 'withdrawal') && (
+          <Notice tone="warn">पुष्टि के बाद आपकी व्यक्तिगत जानकारी स्थायी रूप से मिटा दी जाएगी; केवल बिना पहचान वाले आँकड़े रहेंगे।</Notice>
+        )}
+        {file.error && <ErrorNotice error={file.error} />}
+        <Button type="submit" block disabled={!canSubmit} loading={file.isPending}>
+          अनुरोध भेजें
+        </Button>
+      </form>
+
+      <p className="muted">
+        अनुरोधों का उत्तर 30 दिनों के भीतर दिया जाता है। शिकायत अधिकारी: {officer?.name || '—'}
+        {officer?.email && (
+          <>
+            {' '}
+            · <a href={`mailto:${officer.email}`}>{officer.email}</a>
+          </>
+        )}
+        । समाधान न होने पर आप भारत के डेटा संरक्षण बोर्ड से संपर्क कर सकते हैं।
+      </p>
     </section>
   );
 }

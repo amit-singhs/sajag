@@ -1,4 +1,3 @@
-import { logger } from '../../../lib/logger';
 import type { SmsProvider } from './sms-provider';
 
 const FLOW_URL = 'https://control.msg91.com/api/v5/flow';
@@ -6,7 +5,6 @@ const FLOW_URL = 'https://control.msg91.com/api/v5/flow';
 interface Msg91Config {
   authKey: string;
   otpTemplateId: string;
-  erasureTemplateId?: string;
 }
 
 /** MSG91 Flow API (DLT-registered templates are required for SMS in India). */
@@ -30,13 +28,5 @@ export class Msg91SmsProvider implements SmsProvider {
 
   sendOtp(mobile: string, code: string): Promise<void> {
     return this.sendFlow(this.config.otpTemplateId, mobile, { otp: code });
-  }
-
-  async sendErasureNotice(mobile: string, erasureDate: Date): Promise<void> {
-    if (!this.config.erasureTemplateId) {
-      logger.warn('MSG91_ERASURE_TEMPLATE_ID is not set — erasure notice not sent');
-      return;
-    }
-    await this.sendFlow(this.config.erasureTemplateId, mobile, { date: erasureDate.toLocaleDateString('en-IN') });
   }
 }

@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button';
 import { ErrorNotice } from '../../../components/ui/Feedback';
-import { TextField } from '../../../components/ui/Field';
+import { PasswordField, TextField } from '../../../components/ui/Field';
 import { Wordmark } from '../../../components/ui/Seal';
 import { adminApi } from '../../../lib/api/endpoints';
 import { adminTokenStore } from '../../../lib/auth/token-store';
@@ -46,7 +46,7 @@ export function LoginPage() {
         <form className="login__form stack-lg" onSubmit={onSubmit}>
           <h1 className="display-2">लॉगिन करें</h1>
           <TextField label="ईमेल" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label="पासवर्ड" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <PasswordField label="पासवर्ड" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {login.error && <ErrorNotice error={login.error} />}
           <Button type="submit" block loading={login.isPending} iconAfter="arrowRight">
             डैशबोर्ड खोलें

@@ -58,7 +58,8 @@ async function send(path: string, { method = 'GET', body, token, signal }: Reque
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await send(path, options);
-  return (await response.json()) as T;
+  // 204 No Content (e.g. password change) has no body.
+  return (response.status === 204 ? undefined : await response.json()) as T;
 }
 
 export async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {

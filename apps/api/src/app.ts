@@ -16,7 +16,7 @@ import { adminCampaignRouter } from './modules/campaigns/campaign.routes';
 import { otpRouter } from './modules/otp/otp.routes';
 import { publicRouter } from './modules/participation/public.routes';
 import { privacyRouter } from './modules/privacy/privacy.routes';
-import { rightsRouter } from './modules/rights/rights.routes';
+import { adminUsersRouter } from './modules/auth/admin-users.routes';
 
 const errorBody = (code: string, message: string, details?: unknown): ApiErrorBody => ({
   error: { code, message, ...(details === undefined ? {} : { details }) },
@@ -82,8 +82,8 @@ export function createApp(): express.Express {
   );
   api.use('/public', publicRouter);
   api.use('/otp', otpRouter);
-  api.use('/me', rightsRouter);
   api.use('/admin/auth', authRouter);
+  api.use('/admin/users', adminUsersRouter);
   api.use('/admin/campaigns', adminCampaignRouter);
   api.use('/admin/privacy', privacyRouter);
   api.use((_req, res) => {

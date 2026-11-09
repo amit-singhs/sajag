@@ -3,6 +3,7 @@ import { normalizeDatabaseUrl } from './database-url';
 
 const booleanString = z.enum(['true', 'false']).transform((v) => v === 'true');
 const optional = z.string().trim().optional().transform((v) => (v ? v : undefined));
+const withFallback = (fallback: string) => z.string().trim().optional().transform((v) => v || fallback);
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -29,17 +30,16 @@ const envSchema = z.object({
   SMS_PROVIDER: z.enum(['console', 'msg91']).default('console'),
   MSG91_AUTH_KEY: optional,
   MSG91_TEMPLATE_ID: optional,
-  /** Optional MSG91 flow template for the 48-hour erasure notice (variable: date). */
-  MSG91_ERASURE_TEMPLATE_ID: optional,
 
   DIGILOCKER_CLIENT_ID: optional,
   DIGILOCKER_CLIENT_SECRET: optional,
   DIGILOCKER_REDIRECT_URI: optional,
 
   ORG_NAME: z.string().default('सजग'),
-  GRIEVANCE_OFFICER_NAME: z.string().default(''),
-  GRIEVANCE_OFFICER_EMAIL: z.string().default(''),
-  GRIEVANCE_OFFICER_PHONE: z.string().default(''),
+  // Grievance officer (DPDP Rules, rule 9). Empty values fall back to these defaults.
+  GRIEVANCE_OFFICER_NAME: withFallback('प्रकाश तिवारी'),
+  GRIEVANCE_OFFICER_EMAIL: withFallback('prakatiwa@gmail.com'),
+  GRIEVANCE_OFFICER_PHONE: withFallback(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

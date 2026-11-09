@@ -13,6 +13,8 @@ const LoginPage = lazy(() => import('./features/admin/auth/LoginPage').then((m) 
 const DashboardPage = lazy(() => import('./features/admin/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const CampaignsPage = lazy(() => import('./features/admin/campaigns/CampaignsPage').then((m) => ({ default: m.CampaignsPage })));
 const BuilderPage = lazy(() => import('./features/admin/builder/BuilderPage').then((m) => ({ default: m.BuilderPage })));
+const AdminUsersPage = lazy(() => import('./features/admin/users/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
+const AccountPage = lazy(() => import('./features/admin/users/AccountPage').then((m) => ({ default: m.AccountPage })));
 const PrivacyPage = lazy(() => import('./features/admin/privacy/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
 
 export function App() {
@@ -32,6 +34,8 @@ export function App() {
           <Route path="campaigns/new" element={<BuilderPage />} />
           <Route path="campaigns/:id" element={<BuilderPage />} />
           <Route path="privacy" element={<PrivacyPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="account" element={<AccountPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

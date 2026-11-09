@@ -1,23 +1,23 @@
 import {
   API,
   type AdminConsentView,
+  type AdminCreateInput,
   type AdminProfile,
+  type AdminUpdateInput,
+  type AdminUserView,
   type AuditEntry,
   type Campaign,
   type CampaignAnalytics,
   type CampaignInput,
   type CampaignStatus,
   type CampaignSummary,
+  type ChangePasswordInput,
+  type DataRequestInput,
+  type DataRequestReceipt,
   type DataRequestView,
   type HealthStatus,
   type LoginInput,
   type LoginResult,
-  type ManualRequestInput,
-  type MyDataView,
-  type OtpRequestInput,
-  type OtpRequestResult,
-  type OtpVerifyInput,
-  type OtpVerifyResult,
   type PrivacySummary,
   type PublicCampaign,
   type PublicConfig,
@@ -33,23 +33,16 @@ export const publicApi = {
   campaigns: () => request<CampaignSummary[]>(API.campaigns),
   campaign: (slug: string) => request<PublicCampaign>(API.campaign(slug)),
   submit: (slug: string, body: SubmissionInput) => request<SubmissionResult>(API.submit(slug), { method: 'POST', body }),
-};
-
-export const otpApi = {
-  request: (body: OtpRequestInput) => request<OtpRequestResult>(API.otpRequest, { method: 'POST', body }),
-  verify: (body: OtpVerifyInput) => request<OtpVerifyResult>(API.otpVerify, { method: 'POST', body }),
-};
-
-export const rightsApi = {
-  me: (token: string) => request<MyDataView>(API.me, { token }),
-  fileRequest: (token: string, body: ManualRequestInput) =>
-    request<DataRequestView>(API.meRequests, { method: 'POST', body, token }),
-  withdraw: (token: string) => request<{ erased: number }>(API.meWithdraw, { method: 'POST', token }),
+  fileDataRequest: (body: DataRequestInput) => request<DataRequestReceipt>(API.dataRequests, { method: 'POST', body }),
 };
 
 export const adminApi = {
   login: (body: LoginInput) => request<LoginResult>(API.adminLogin, { method: 'POST', body }),
   me: () => request<AdminProfile>(API.adminMe),
+  changePassword: (body: ChangePasswordInput) => request<void>(API.adminPassword, { method: 'POST', body }),
+  users: () => request<AdminUserView[]>(API.adminUsers),
+  createUser: (body: AdminCreateInput) => request<AdminUserView>(API.adminUsers, { method: 'POST', body }),
+  updateUser: (id: string, body: AdminUpdateInput) => request<AdminUserView>(API.adminUser(id), { method: 'PATCH', body }),
   campaigns: () => request<CampaignSummary[]>(API.adminCampaigns),
   campaign: (id: string) => request<Campaign>(API.adminCampaign(id)),
   createCampaign: (body: CampaignInput) => request<Campaign>(API.adminCampaigns, { method: 'POST', body }),
@@ -72,8 +65,8 @@ export const queryKeys = {
   health: ['health'] as const,
   liveCampaigns: ['campaigns', 'live'] as const,
   publicCampaign: (slug: string) => ['campaigns', 'public', slug] as const,
-  myData: ['me'] as const,
   adminMe: ['admin', 'me'] as const,
+  adminUsers: ['admin', 'users'] as const,
   adminCampaigns: ['admin', 'campaigns'] as const,
   adminCampaign: (id: string) => ['admin', 'campaigns', id] as const,
   analytics: (id: string) => ['admin', 'analytics', id] as const,
